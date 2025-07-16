@@ -1,0 +1,29 @@
+select d.name As department_name,
+ Round(avg(e.age), 2) As average_age
+From employees e
+ join departments d ON e.department_id = d.id
+ group by d.name;
+ 
+select d.name As department_name,
+count(*) As Employees_age_40
+ from employees e
+ Join departments d ON e.department_id = d.id
+ where e.age > 40
+ Group by d.name
+ order by Employees_age_40 desc
+limit 1; 
+
+
+select count(*) as recent_joins
+from employees 
+where joining_date >= CURDATE() -  interval 100 day
+;
+
+UPDATE employees
+SET joining_date = CURDATE() -  interval 1 day
+where department_id = ( select id from departments where name =  'HR');
+
+select count(*) as recent_joins_after_update
+from employees 
+where joining_date >= CURDATE() -  interval 100 day
+;
