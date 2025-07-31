@@ -1,0 +1,49 @@
+WITH formatted AS (
+  SELECT
+    date,
+    resource_id,
+    is_clock_in,
+    is_clock_out,
+    '20' || substr(start_time, instr(start_time, ' ') - 2, 2) || '-' ||
+    printf('%02d', CAST(substr(start_time, 1, instr(start_time, '/') - 1) AS INTEGER)) || '-' ||
+    printf('%02d', CAST(substr(substr(start_time, instr(start_time, '/') + 1), 1, instr(substr(start_time, instr(start_time, '/') + 1), '/') - 1) AS INTEGER)) || ' ' ||
+    printf('%02d:%02d',
+      CAST(substr(start_time, instr(start_time, ' ') + 1, instr(start_time || ':', ':') - instr(start_time, ' ') - 1) AS INTEGER),
+      CAST(substr(start_time || ':', instr(start_time || ':', ':') + 1) AS INTEGER)
+    ) AS start_ts,
+
+    
+    '20' || substr(end_time, instr(end_time, ' ') - 2, 2) || '-' ||
+    printf('%02d', CAST(substr(end_time, 1, instr(end_time, '/') - 1) AS INTEGER)) || '-' ||
+    printf('%02d', CAST(substr(substr(end_time, instr(end_time, '/') + 1), 1, instr(substr(end_time, instr(end_time, '/') + 1), '/') - 1) AS INTEGER)) || ' ' ||
+    printf('%02d:%02d',
+      CAST(substr(end_time, instr(end_time, ' ') + 1, instr(end_time || ':', ':') - instr(end_time, ' ') - 1) AS INTEGER),
+      CAST(substr(end_time || ':', instr(end_time || ':', ':') + 1) AS INTEGER)
+    ) AS end_ts,
+
+    date AS original_date,
+    resource_id AS original_resource
+  FROM test_dein
+  WHERE start_time IS NOT NULL AND end_time IS NOT NULL
+),
+durations AS (
+  SELECT
+    original_date AS date,
+    original_resource AS resource_id,
+    start_ts,
+    end_ts,
+    CAST((julianday(end_ts) - julianday(start_ts)) * 86400 AS INTEGER) AS duration_seconds
+  FROM formatted
+)
+SELECT
+  date,
+  resource_id,
+  MIN(start_ts) AS clock_in_time,
+  MAX(end_ts) AS clock_out_time,
+  printf('%02d:%02d:%02d',
+    SUM(duration_seconds) / 3600,
+    (SUM(duration_seconds) % 3600) / 60,
+    SUM(duration_seconds) % 60
+  ) AS total_hours
+FROM durations
+GROUP BY date, resource_id;
